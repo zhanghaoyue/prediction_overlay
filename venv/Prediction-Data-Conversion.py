@@ -29,6 +29,23 @@ if gc.isenabled() is False:
     gc.enable()
 '''
 
+
+
+# map np dtypes to vips
+# oh dear str lookup ... is there a better way?
+dtype_to_format = {
+    'uint8': 'uchar',
+    'int8': 'char',
+    'uint16': 'ushort',
+    'int16': 'short',
+    'uint32': 'uint',
+    'int32': 'int',
+    'float32': 'float',
+    'float64': 'double',
+    'complex64': 'complex',
+    'complex128': 'dpcomplex',
+}
+
 @profile
 def change_color(mask):
 
@@ -49,14 +66,14 @@ def prediction_data_input(data_folder_address, input_file_name, tile_size):
     slide_results = h5py.File(data_folder_address + input_file_name + ".hdf5", "r")['/predictions']
     # prediction result dict list
     slide = openslide.OpenSlide(data_folder_address + input_file_name + '.svs')
-    prediction_result = np.ndarray((slide.dimensions[0], slide.dimensions[1]), dtype=np.int8)
+    prediction_result = np.ndarray((slide.dimensions[1], slide.dimensions[0]), dtype=np.int8)
 
     for tile_id in range(1, slide_results.shape[0]):
         tile_result = np.squeeze(slide_results[tile_id - 1, :, :])
         tile_result[tile_result > 2] = 0
         tile_loc = tile_locations.item().get(tile_id)
-        x = int(tile_loc[0])
-        y = int(tile_loc[1])
+        x = int(tile_loc[1])
+        y = int(tile_loc[0])
         prediction_result[x:x + tile_size, y:y + tile_size] = tile_result
 
     '''
@@ -79,18 +96,20 @@ b = change_color(a)
 t1 = time.time()
 print(t1-t0)
 
+
 del a
+#filename = data_folder_address+input_file_name+'pred.tif'
 
-filename = data_folder_address+input_file_name+'pred.png'
+#cv2.imwrite(filename, b)
 
-cv2.imwrite(filename, b)
+
+height, width, bands = b.shape
+linear = b.reshape(width*height*bands)
+img = pyvips.Image.new_from_memory(linear.data, width, height, bands, dtype_to_format[str(b.dtype)])
+img.tiffsave(data_folder_address+input_file_name+'pred.tif', compression="deflate", tile=True, tile_width=256, tile_height=256, pyramid=True)
+#img.dzsave(data_folder_address+input_file_name+'pred')
 
 del b
-
-
-img = pyvips.Image.new_from_file(data_folder_address+input_file_name+'pred.png')
-img.dzsave(data_folder_address+input_file_name)
-
 del img
 gc.collect()
 
