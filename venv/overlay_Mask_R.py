@@ -12,6 +12,7 @@ import time
 
 # global variable
 cv2.setUseOptimized(True)
+cv2.ocl.setUseOpenCL(False)
 
 # smallest possible difference
 EPSILON = sys.float_info.epsilon
@@ -77,7 +78,6 @@ dtype_to_format = {
 }
 
 
-@profile
 def prob_to_category(mask, a_range_min, a_range_max, b_range_min, b_range_max):
     category = np.zeros((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
     category[:, :] = 0
@@ -87,7 +87,6 @@ def prob_to_category(mask, a_range_min, a_range_max, b_range_min, b_range_max):
     return category
 
 
-@profile
 def convert_to_rgb(minval, maxval, value_for_change, input_colors):
     # colors specifies a series of points deliniating color ranges
     # determine where val falls within the entire range
@@ -136,40 +135,39 @@ def prediction_data_input(data_folder_address, slide_folder_address, input_file_
     for tile_id, cur_loc in tile_locations.items():
 
         tile_result = slide_results['%d_det' % int(tile_id)][:]
-
         if slide_mg == 40:
-            tile_result_color = np.zeros((1024, 1024, 3), dtype=np.uint8)
+            tile_result_color = np.ndarray((1024, 1024, 3), dtype=np.uint8)
 
             for index, value in np.ndenumerate(tile_result):
                 tile_result_color[index[0]][index[1]] = convert_to_rgb(0.0, 3.0, value, colors)
                 tile_result_color = cv2.UMat(tile_result_color)
-                tile_result_color = cv2.resize(tile_result_color.get(), None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+                tile_result_color = cv2.resize(tile_result_color.get(), None, fx=2, fy=2)
+
             del tile_result
             gc.collect()
 
             x = int(cur_loc[1])
             y = int(cur_loc[0])
             pred_result[x:x + 1024, y:y + 1024] = tile_result_color
-            #pred_counter[x: x + 1024, y: y + 1024] += 1
+            # pred_counter[x: x + 1024, y: y + 1024] += 1
+            tile_result_color.release()
         else:
-            tile_result_color = np.zeros((512, 512, 3), dtype=np.uint8)
+            tile_result_color = np.ndarray((512, 512, 3), dtype=np.uint8)
             for index, value in np.ndenumerate(tile_result):
                 tile_result_color[index[0]][index[1]] = convert_to_rgb(0.0, 3.0, value, colors)
                 tile_result_color = cv2.UMat(tile_result_color)
-                tile_result_color = cv2.resize(tile_result_color.get(), None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+                tile_result_color = cv2.resize(tile_result_color.get(), None, fx=2, fy=2)
+
             del tile_result
             gc.collect()
 
             x = int(cur_loc[1])
             y = int(cur_loc[0])
             pred_result[x:x + 512, y:y + 512] = tile_result_color
-            #pred_counter[x: x + 512, y: y + 512] += 1
+            # pred_counter[x: x + 512, y: y + 512] += 1
 
-        del tile_result_color
-        gc.collect()
-
-    #pred_counter[np.where(pred_counter == 0)[0], np.where(pred_counter == 0)[1]] = 1
-    #pred_result /= pred_counter
+    # pred_counter[np.where(pred_counter == 0)[0], np.where(pred_counter == 0)[1]] = 1
+    # pred_result /= pred_counter
 
     return pred_result
 
