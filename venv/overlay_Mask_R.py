@@ -12,6 +12,7 @@ import time
 
 # global variable
 cv2.setUseOptimized(True)
+cv2.ocl.setUseOpenCL(False)
 
 # smallest possible difference
 EPSILON = sys.float_info.epsilon
@@ -27,10 +28,10 @@ input_file_name = ["4", "22", "45", "48", "55", "56", "73", "84", "98",
                    "1542", "1676", "1784", "1994", "2090"]
 
 # folder of prediction mask and indices
-mask_folder_address = "/Users/hz32/Desktop/Mask_RCNN/"
+mask_folder_address = "C:/Users/HaoyueZhang/Google Drive/Mask_RCNN/"
 
 # folder of svs file
-slide_folder_address = "/Users/hz32/Desktop/wholeslides/"
+slide_folder_address = "E:/wholeslides/"
 
 
 # range for category 0, 1, 2
